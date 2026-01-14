@@ -14,6 +14,7 @@ import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
 import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -27,8 +28,10 @@ import { SettingsModule } from './settings/settings.module';
     PurchasingModule,
     UsersModule,
     CustomersModule,
+    CustomersModule,
     ReportsModule,
     SettingsModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

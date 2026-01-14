@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(params?: { skip?: number; take?: number; branchId?: number }) {
     const { skip = 0, take = 50, branchId } = params || {};
@@ -55,19 +55,40 @@ export class UsersService {
         passwordHash,
         branchId: data.branchId || 1, // Default branch
         active: true,
+        roles: data.roleId ? {
+          create: { roleId: Number(data.roleId) }
+        } : undefined,
       },
+      include: {
+        roles: { include: { role: true } }
+      }
     });
   }
 
   async update(id: number, data: any) {
-    if (data.password) {
+    // Handle password hashing if provided and not empty
+    if (data.password && data.password.trim() !== '') {
       data.passwordHash = await bcrypt.hash(data.password, 10);
-      delete data.password;
     }
+    // Always remove password field as it's not in Prisma schema (or not to be updated directly)
+    delete data.password;
+
+    // Handle roleId extraction
+    const roleId = data.roleId;
+    delete data.roleId; // Remove from data passed to user.update
 
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        roles: roleId ? {
+          deleteMany: {},
+          create: { roleId: Number(roleId) }
+        } : undefined
+      },
+      include: {
+        roles: { include: { role: true } }
+      }
     });
   }
 
@@ -75,6 +96,28 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: { active: false },
+    });
+  }
+
+  async findById(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        branch: true,
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
   }
 }

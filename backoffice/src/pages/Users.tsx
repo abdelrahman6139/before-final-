@@ -4,23 +4,34 @@ import { Plus, Edit, Trash, UserCircle } from 'lucide-react';
 
 export default function Users() {
     const [users, setUsers] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState<any>(null);
     const [formData, setFormData] = useState({
         username: '',
         fullName: '',
         password: '',
-        role: 'CASHIER'
+        roleId: ''
     });
 
     useEffect(() => {
         fetchUsers();
+        fetchRoles();
     }, []);
 
     const fetchUsers = async () => {
         try {
             const { data } = await apiClient.get('/users');
             setUsers(data.data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchRoles = async () => {
+        try {
+            const { data } = await apiClient.get('/roles');
+            setRoles(data || []);
         } catch (e) {
             console.error(e);
         }
@@ -35,8 +46,9 @@ export default function Users() {
                 await apiClient.post('/users', formData);
             }
             setShowModal(false);
+            setShowModal(false);
             setEditingUser(null);
-            setFormData({ username: '', fullName: '', password: '', role: 'CASHIER' });
+            setFormData({ username: '', fullName: '', password: '', roleId: '' });
             fetchUsers();
         } catch (e: any) {
             alert(e.response?.data?.message || 'فشل حفظ المستخدم');
@@ -98,7 +110,14 @@ export default function Users() {
                                         <div style={{ display: 'flex', gap: '10px' }}>
                                             <button onClick={() => {
                                                 setEditingUser(u);
-                                                setFormData({ username: u.username, fullName: u.fullName, password: '', role: u.role || 'CASHIER' });
+                                                // Find role ID from user roles
+                                                const userRoleId = u.roles?.[0]?.roleId || '';
+                                                setFormData({
+                                                    username: u.username,
+                                                    fullName: u.fullName,
+                                                    password: '',
+                                                    roleId: userRoleId
+                                                });
                                                 setShowModal(true);
                                             }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb' }}>
                                                 <Edit size={18} />
@@ -130,6 +149,20 @@ export default function Users() {
                             <div style={{ marginBottom: '15px' }}>
                                 <label style={{ display: 'block', marginBottom: '5px' }}>اسم المستخدم (للدخول)</label>
                                 <input className="input-field" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required />
+                            </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '5px' }}>الصلاحية / الدور</label>
+                                <select
+                                    className="input-field"
+                                    value={formData.roleId}
+                                    onChange={e => setFormData({ ...formData, roleId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">اختر الدور</option>
+                                    {roles.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div style={{ marginBottom: '15px' }}>
                                 <label style={{ display: 'block', marginBottom: '5px' }}>{editingUser ? 'كلمة المرور الجديدة (اختياري)' : 'كلمة المرور'}</label>

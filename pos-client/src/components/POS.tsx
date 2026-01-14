@@ -102,11 +102,16 @@ function POS() {
             setDeliveredNow(true);
         } else if (paymentType === 'CREDIT') {
             setPaidAmount(0);
-            setDeliveredNow(false);
+            setDeliveredNow(true); // ✅ Changed to true so stock is deducted immediately
         }
     }, [paymentType, cart, appliedDiscount, activeTab]);
 
-    // ✅ NEW: Auto-set payment method to CASH when no customer selected
+    // ✅ NEW: Auto-reset payment type to FULL when no customer selected (Cash Customer)
+    useEffect(() => {
+        if (!selectedCustomer) {
+            setPaymentType('FULL');
+        }
+    }, [selectedCustomer]);
 
     const togglePriceType = (productId: number, newType: 'RETAIL' | 'WHOLESALE') => {
         setCart(cart.map(item => {
@@ -437,9 +442,9 @@ function POS() {
             return;
         }
 
-        // ✅ NEW: Validate payment method for cash-only customers
-        if (!selectedCustomer && paymentMethod !== 'CASH') {
-            setMessage('❌ العميل النقدي يمكنه الدفع نقداً فقط');
+        // ✅ NEW: Validate payment type for cash-only customers
+        if (!selectedCustomer && (paymentType === 'PARTIAL' || paymentType === 'CREDIT')) {
+            setMessage('❌ العميل النقدي لا يمكنه الدفع آجل أو جزئي');
             playBeep('error');
             return;
         }

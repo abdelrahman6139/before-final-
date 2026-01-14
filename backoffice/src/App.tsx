@@ -18,6 +18,7 @@ import PlatformSettings from './pages/PlatformSettings';
 import PriceManagement from './pages/PriceManagement';
 import ProductTransactions from './pages/ProductTransactions';
 import CustomerPayments from './pages/CustomerPayments';
+import Roles from './pages/Roles';
 
 
 export default function App() {
@@ -49,9 +50,10 @@ export default function App() {
           <Route path="returns" element={<Returns />} />
           <Route path="settings" element={<PlatformSettings />} />
           <Route path="price-management" element={<PriceManagement />} />
-          <Route path="product-transactions" element={<ProductTransactions />} />
+          {/* <Route path="product-transactions" element={<ProductTransactions />} /> */}
           <Route path="/settings/platforms" element={<ProtectedRoute><PlatformSettings /></ProtectedRoute>} />
           <Route path="/customer-payments" element={<CustomerPayments />} />
+          <Route path="/roles" element={<Roles />} />
 
         </Route>
       </Routes>

@@ -1,39 +1,70 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, LogOut, Menu, X, Users, Settings, ShoppingCart, Plane, Building2, Tags, BarChart3, ClipboardList, RotateCcw, DollarSign } from 'lucide-react';
-import { useState } from 'react';
+import { LayoutDashboard, Package, LogOut, Menu, X, Users, Settings, ShoppingCart, Plane, Building2, Tags, BarChart3, ClipboardList, RotateCcw, DollarSign, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import apiClient from './api/client';
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+
+    // Auto-refresh profile on mount to get latest role/permissions
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const { data } = await apiClient.get('/users/profile');
+                if (data) {
+                    console.log('Profile Refreshed:', data);
+                    localStorage.setItem('user', JSON.stringify(data));
+                    setUser(data);
+                }
+            } catch (e) {
+                console.error('Failed to refresh profile', e);
+                // If 401, apiClient interceptor will handle it
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const handleLogout = () => {
         localStorage.clear();
         navigate('/login');
     };
 
-    const navItems = [
-        { icon: LayoutDashboard, label: 'لوحة التحكم', path: '/', section: 'main' },
-        { icon: Package, label: 'المنتجات', path: '/products', section: 'inventory' },
-        { icon: Tags, label: 'التصنيفات', path: '/categories', section: 'inventory' },
-        { icon: ClipboardList, label: 'تسوية المخزون', path: '/stock-adjustments', section: 'inventory' },
-        { icon: DollarSign, label: 'إدارة الأسعار', path: '/products/price-management', section: 'inventory' },
-        { icon: ShoppingCart, label: 'المبيعات', path: '/sales', section: 'transactions' },
-        { icon: RotateCcw, label: 'المرتجعات', path: '/returns', section: 'transactions' },
-        { icon: Plane, label: 'استلام بضاعة', path: '/receive-goods', section: 'transactions' },
-        { icon: Building2, label: 'الموردين', path: '/suppliers', section: 'people' },
-        { icon: Users, label: 'العملاء', path: '/customers', section: 'people' },
-        { icon: Users, label: 'المستخدمين', path: '/users', section: 'admin' },
-        { icon: BarChart3, label: 'التقارير', path: '/reports', section: 'admin' },
-        { icon: Settings, label: 'إعدادات المنصات', path: '/settings/platforms', section: 'admin' },
-        {
-            icon: DollarSign,
-            label: 'حسابات العملاء',
-            path: '/customer-payments',
-            section: 'transactions'
-        },
+    // Debugging Logs
+    console.log('Layout Debug - User:', user);
+    console.log('Layout Debug - Permissions:', user.permissions);
+    console.log('Layout Debug - Roles:', user.roles);
 
+    // ✅ MAP Permissions to Items
+    // ✅ MAP Permissions to Items
+    const navItems = [
+        { icon: LayoutDashboard, label: 'لوحة التحكم', path: '/', section: 'main', permission: null }, // Always visible
+
+        // Inventory
+        { icon: Package, label: 'المنتجات', path: '/products', section: 'inventory', permission: 'products:read' },
+        { icon: Tags, label: 'التصنيفات', path: '/categories', section: 'inventory', permission: 'products:read' },
+        { icon: ClipboardList, label: 'تسوية المخزون', path: '/stock-adjustments', section: 'inventory', permission: 'stock:adjust' },
+        { icon: DollarSign, label: 'إدارة الأسعار', path: '/products/price-management', section: 'inventory', permission: 'products:write' },
+
+        // Sales
+        { icon: ShoppingCart, label: 'المبيعات', path: '/sales', section: 'transactions', permission: 'sales:read' },
+        { icon: RotateCcw, label: 'المرتجعات', path: '/returns', section: 'transactions', permission: 'sales:create' }, // Returns imply creating transactions
+        { icon: DollarSign, label: 'حسابات العملاء', path: '/customer-payments', section: 'transactions', permission: 'sales:read' },
+
+        // Purchasing
+        { icon: Plane, label: 'استلام بضاعة', path: '/receive-goods', section: 'transactions', permission: 'purchasing:write' },
+        { icon: Building2, label: 'الموردين', path: '/suppliers', section: 'people', permission: 'purchasing:read' },
+
+        // People
+        { icon: Users, label: 'العملاء', path: '/customers', section: 'people', permission: 'sales:read' },
+
+        // Admin
+        { icon: Users, label: 'المستخدمين', path: '/users', section: 'admin', permission: 'users:manage' },
+        { icon: Shield, label: 'الأدوار والصلاحيات', path: '/roles', section: 'admin', permission: 'users:manage' },
+        { icon: BarChart3, label: 'التقارير', path: '/reports', section: 'admin', permission: 'sales:read' }, // Reports accessible to sales viewers or admins
+        { icon: Settings, label: 'إعدادات المنصات', path: '/settings/platforms', section: 'admin', permission: 'settings:manage' },
     ];
 
     const sections = {
@@ -111,6 +142,15 @@ export default function Layout() {
                                     {label}
                                 </div>
                                 {sectionItems.map(item => {
+                                    // ✅ Check Permission
+                                    // Fix: Make admin check case-insensitive and safe
+                                    const isAdmin = user.roles?.some((r: string) => r.toLowerCase() === 'admin');
+                                    const hasPermission = user.permissions?.includes(item.permission);
+
+                                    if (item.permission && !hasPermission && !isAdmin) {
+                                        return null;
+                                    }
+
                                     const isActive = location.pathname === item.path;
                                     return (
                                         <Link
